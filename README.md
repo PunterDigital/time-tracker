@@ -4,7 +4,7 @@ Time Tracker is a Laravel-based application designed to help you manage your pro
 
 ## Live Server
 
-Try Time Tracker for free on our hosted application! [Click here](#your-hosted-link) to access the live server.
+Try Time Tracker for free on our hosted application! [Click here](https://time-tracker.punterdigital.com/) to access the live server.
 
 ## Features
 
@@ -72,7 +72,7 @@ php artisan db:seed
 Start the Laravel development server:
 
 ```bash
-npm run prod
+npm run build
 php artisan serve
 ```
 
