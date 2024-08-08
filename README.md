@@ -42,32 +42,15 @@ composer install
 npm install
 ```
 
-### Step 3: Configure Environment Variables
+### Step 3: Run the instal script
 
-Copy the \`.env.example\` file to \`.env\` and update the database connection settings:
-
-```bash
-cp .env.example .env
-```
-
-### Step 4: Generate Application Key
-
-Generate a new application key:
+Run the installation script to setup the application:
 
 ```bash
-php artisan key:generate
+php artisan app:install
 ```
 
-### Step 5: Run Migrations and Seed Database
-
-Run the migrations and seed the database:
-
-```bash
-php artisan migrate
-php artisan db:seed
-```
-
-### Step 6: Start the Development Server
+### Step 4: Start the Development Server
 
 Start the Laravel development server:
 
