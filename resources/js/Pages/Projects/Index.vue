@@ -4,82 +4,19 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 Projects
             </h2>
+
+            <button @click="openModal" v-if="$can('projects:create')" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                New Project
+            </button>
         </template>
-        <div class="container mx-auto p-4">
-            <h1 class="text-2xl font-semibold mb-4">Projects</h1>
-            <form @submit.prevent="createProject" class="bg-gray-100 p-4 rounded-md shadow-sm mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="client" class="block text-sm font-semibold">Client:</label>
-                        <input id="client" v-model="newProject.client" required class="border rounded-md p-2 w-full" />
-                    </div>
-                    <div>
-                        <label for="name" class="block text-sm font-semibold">Project Name:</label>
-                        <input id="name" v-model="newProject.name" required class="border rounded-md p-2 w-full" />
-                    </div>
-                    <div>
-                        <label for="budget" class="block text-sm font-semibold">Budget:</label>
-                        <input type="number" id="budget" v-model="newProject.budget" step="0.01" class="border rounded-md p-2 w-full" />
-                    </div>
-                    <div>
-                        <label for="billingRate" class="block text-sm font-semibold">Billing Rate per Hour:</label>
-                        <input type="number" id="billingRate" v-model="newProject.billingRate" step="0.01" class="border rounded-md p-2 w-full" />
-                    </div>
-                </div>
-                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mt-4">Create Project</button>
-            </form>
-
-            <!-- Edit Project Modal -->
-            <div v-if="editingProject" class="fixed inset-0 flex items-center justify-center z-50">
-                <div class="fixed inset-0 bg-black opacity-50"></div>
-
-                <div class="bg-white p-6 rounded-md shadow-lg w-1/2 z-10">
-                    <h3 class="text-xl font-semibold mb-4">Edit Project</h3>
-                    <div>
-                        <label for="edit-client" class="block text-sm font-semibold">Client:</label>
-                        <input id="edit-client" v-model="editingProject.client" required class="border rounded-md p-2 w-full mb-3" />
-                    </div>
-                    <div>
-                        <label for="edit-name" class="block text-sm font-semibold">Project Name:</label>
-                        <input id="edit-name" v-model="editingProject.name" required class="border rounded-md p-2 w-full mb-3" />
-                    </div>
-                    <div>
-                        <label for="edit-budget" class="block text-sm font-semibold">Budget:</label>
-                        <input type="number" id="edit-budget" v-model="editingProject.budget" step="0.01" class="border rounded-md p-2 w-full mb-3" />
-                    </div>
-                    <div>
-                        <label for="edit-billingRate" class="block text-sm font-semibold">Billing Rate per Hour:</label>
-                        <input type="number" id="edit-billingRate" v-model="editingProject.billing_rate" step="0.01" class="border rounded-md p-2 w-full mb-3" />
-                    </div>
-                    <div class="flex justify-end">
-                        <button @click="updateProject" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 mr-2">Update</button>
-                        <button @click="closeEditModal" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Cancel</button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="showModal" class="fixed inset-0 flex items-center justify-center z-50">
-                <div class="fixed inset-0 bg-black opacity-50"></div>
-
-                <div class="bg-white p-6 rounded-md shadow-lg w-1/2 z-10">
-                    <h3>Select Users to Add:</h3>
-                    <div v-for="user in teamUsers" :key="user.id">
-                        <input type="checkbox" :value="user.id" v-model="selectedUsers">
-                        {{ user.name }}
-                    </div>
-                    <button @click="addUsersToProject">Add Users</button>
-                    <button @click="showModal = false">Cancel</button>
-                </div>
-            </div>
-
-            <h3 class="text-xl font-semibold mb-2">Your Projects</h3>
-            <table class="min-w-full bg-white rounded-md shadow-sm">
+        <div class="max-w-7xl mx-auto p-4">
+            <table class="mt-5 min-w-full bg-white rounded-md shadow-sm">
                 <thead>
                 <tr class="border-b">
                     <th class="p-4 text-left">Client</th>
                     <th class="p-4 text-left">Project Name</th>
                     <th class="p-4 text-left">Total Time</th>
-                    <th class="p-4 text-left" v-if="isAdmin">Budget</th>
+                    <th class="p-4 text-left" v-if="$hasRole('admin')">Budget</th>
                     <th class="p-4 text-left">Billing Rate</th>
                     <th class="p-4 text-left"></th>
                 </tr>
@@ -89,24 +26,89 @@
                     <td class="p-4">{{ project.client }}</td>
                     <td class="p-4">{{ project.name }}</td>
                     <td class="p-4">{{ formatTime(project.total_time) }}</td>
-                    <td class="p-4">${{ project.budget }}</td>
+                    <td class="p-4" v-if="$hasRole('admin')">${{ project.budget }}</td>
                     <td class="p-4">${{ project.billing_rate }}</td>
-                    <td class="p-4">
-                        <button @click="showModal = true; this.projectId = project.id">Add Users to Project</button> |
-                        <button @click="editProject(project.id)" class="text-blue-500 hover:text-blue-700">Edit</button> |
-                        <button @click="deleteProject(project.id)" class="text-red-500 hover:text-red-700">Delete</button>
+                    <td class="p-4 flex flex-row gap-2">
+                        <button @click="isAddUsersModalOpen = true" type="button" class="rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Add User to Project</button>
+
+                        <button @click="openEditModal(project)" type="button" class="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-purple-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600">Edit Project</button>
+
+                        <button @click="deleteProject(project)" type="button" class="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Delete Project</button>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
+
+        <NewProjectModal v-model:isOpen="isModalOpen" />
+
+        <EditProjectModal
+            :project="selectedProject"
+            v-model:showModal="isEditModalOpen"
+        />
+
+        <AddUsersToProjects
+            v-model:showModal="isAddUsersModalOpen"
+            :teamUsers="availableUsers"
+            @addUsers="handleAddUsers"
+        />
+
     </AppLayout>
 </template>
+
+<script setup>
+import {ref} from "vue";
+import NewProjectModal from "@/Components/projects/NewProjectModal.vue";
+import EditProjectModal from "@/Components/projects/EditProjectModal.vue";
+import {usePage} from "@inertiajs/vue3";
+import AddUsersToProjects from "@/Components/projects/AddUsersToProjects.vue";
+
+const props = defineProps({
+    projects: {
+        type: Array,
+        required: true,
+    },
+    teamUsers: {
+        type: Array,
+        required: true,
+    },
+});
+
+const isModalOpen = ref(false);
+const isEditModalOpen = ref(false);
+const selectedProject = ref(null);
+const isAddUsersModalOpen = ref(false);
+const availableUsers = ref(props.teamUsers); // Populate this with your team users
+
+const handleAddUsers = (selectedUserIds) => {
+    // Handle adding the selected users to your project
+    console.log('Selected user IDs:', selectedUserIds);
+    // Your logic to add users to the project
+};
+
+const openEditModal = (project) => {
+    selectedProject.value = project;
+    isEditModalOpen.value = true;
+};
+
+const openModal = () => {
+    isModalOpen.value = true;
+};
+
+const page = usePage();
+
+const deleteProject = (project) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+        router.delete(`/projects/${project.id}`);
+    }
+}
+</script>
 
 
 <script>
 import axios from 'axios';
 import AppLayout from "@/Layouts/AppLayout.vue";
+import {router} from "@inertiajs/vue3";
 
 export default {
     components: {AppLayout},
@@ -120,25 +122,11 @@ export default {
             },
             showModal: false,
             editingProject: null,
-            projects: [],
-            teamUsers: [], // Fetch this list from the server
             selectedUsers: [],
             projectId: null,
         };
     },
-    async created() {
-        await this.fetchProjects();
-        await this.fetchTeamUsers();
-    },
     methods: {
-        async fetchTeamUsers() {
-            try {
-                const response = await axios.get('/api/team-users');
-                this.teamUsers = response.data;
-            } catch (error) {
-                console.error('An error occurred while fetching the team users:', error);
-            }
-        },
         async addUsersToProject() {
             try {
                 await axios.post(`/api/projects/${this.projectId}/add-users`, {
@@ -150,61 +138,11 @@ export default {
             }
             this.showModal = false;
         },
-        editProject(projectId) {
-            this.editingProject = this.projects.find(project => project.id === projectId);
-        },
-        closeEditModal() {
-            this.editingProject = null;
-        },
-        async updateProject() {
-            try {
-                const response = await axios.put(`/api/projects/${this.editingProject.id}`, this.editingProject);
-                if (response.status === 200) {
-                    this.closeEditModal();
-                    await this.fetchProjects(); // Refresh the projects list
-                } else {
-                    console.error('Failed to update the project:', response.data);
-                }
-            } catch (error) {
-                console.error('An error occurred while updating the project:', error);
-            }
-        },
-        async deleteProject(projectId) {
-            if (window.confirm('Are you sure you want to delete this project?')) {
-                try {
-                    await axios.delete(`/api/projects/${projectId}`);
-                    this.projects = this.projects.filter(project => project.id !== projectId);
-                    // Optionally, show a success message
-                } catch (error) {
-                    console.error('An error occurred while deleting the project:', error);
-                    // Optionally, show an error message
-                }
-            }
-        },
         formatTime(seconds) {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const remainingSeconds = seconds % 60;
             return `${hours}h ${minutes}m ${remainingSeconds}s`;
-        },
-        async createProject() {
-            try {
-                await axios.post('/projects', this.newProject);
-                this.newProject.client = '';
-                this.newProject.name = '';
-                this.newProject.budget = null; // Reset budget
-                await this.fetchProjects(); // Refresh the projects list
-            } catch (error) {
-                console.error('An error occurred while creating the project:', error);
-            }
-        },
-        async fetchProjects() {
-            try {
-                const response = await axios.get('/api/projects');
-                this.projects = response.data;
-            } catch (error) {
-                console.error('An error occurred while fetching the projects:', error);
-            }
         },
     },
 };

@@ -20,7 +20,7 @@ class ProjectController extends Controller
      */
     public function addUsers(Request $request, Project $project)
     {
-        $this->authorize('add users to projects');
+        $this->authorize('projects:modifyUsers');
         $userIds = $request->input('users');
         $project->users()->attach($userIds);
 
@@ -28,15 +28,10 @@ class ProjectController extends Controller
     }
 
     /**
-     * Gets a list of projects the user is added to and returns as JSON for API usage
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * Display a listing of the resource.
      */
-    public function apiIndex(Request $request)
+    public function index(Request $request)
     {
-        $this->authorize('view projects');
         $team = $request->user()->currentTeam;
 
         $projects = Project::with('users')->where('team_id', $team->id)
@@ -51,19 +46,8 @@ class ProjectController extends Controller
             }])
             ->get();
 
-        return response()->json($projects);
+        return Inertia::render('Projects/Index', ['projects' => $projects, 'team_users' => $team->allUsers()]);
     }
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        $this->authorize('view projects');
-        return Inertia::render('Projects/Index');
-    }
-
-
 
     /**
      * Show the form for creating a new resource.
@@ -78,12 +62,11 @@ class ProjectController extends Controller
      */
     public function store(Request $request)
     {
-        $this->authorize('create projects');
         $request->validate([
             'client' => 'required',
             'name' => 'required',
             'budget' => 'required',
-            'billingRate' => 'nullable|numeric', // Validate billing rate
+            'billing_rate' => 'nullable|numeric', // Validate billing rate
         ]);
 
         Project::create([
@@ -91,7 +74,7 @@ class ProjectController extends Controller
             'client' => $request->client,
             'name' => $request->name,
             'budget' => $request->budget,
-            'billing_rate' => $request->billingRate, // Save billing rate
+            'billing_rate' => $request->billing_rate, // Save billing rate
             'team_id' => Auth::user()->currentTeam->id, // Access the ID of the current team
         ]);
 
@@ -119,7 +102,6 @@ class ProjectController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->authorize('edit projects');
         $request->validate([
             'client' => 'required|string|max:255',
             'name' => 'required|string|max:255',
@@ -140,7 +122,7 @@ class ProjectController extends Controller
 
         $project->save();
 
-        return response()->json($project);
+        return redirect()->route('projects.index');
     }
 
     /**
@@ -148,9 +130,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project)
     {
-        $this->authorize('delete projects');
         $project->delete();
 
-        return response()->json(['message' => 'Project deleted successfully']);
+        return redirect()->route('projects.index');
     }
 }
