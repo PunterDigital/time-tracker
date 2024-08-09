@@ -12,7 +12,6 @@ class TimeEntryController extends Controller
 
     public function getWeekView()
     {
-        $this->authorize('view time entries');
         $userId = auth()->id();
         $weekView = [];
 

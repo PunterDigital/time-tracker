@@ -19,7 +19,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->get('/time-entries', 'TimeEntryController@apiIndex');
-Route::middleware('auth:sanctum')->post('/time-entries/add', [\App\Http\Controllers\TimeEntryController::class, 'store'])->name('time_entries.store');
+Route::middleware('auth:sanctum')->post('/time-entries/add', [\App\Http\Controllers\TimeEntryController::class, 'store'])->name('time-entries.store');
 Route::middleware('auth:sanctum')->get('/reports', [\App\Http\Controllers\ReportController::class, 'reportProjects']);
 Route::middleware('auth:sanctum')->get('/reports/week-breakdown', [\App\Http\Controllers\ReportController::class, 'reportWeekBreakdown']);
 Route::middleware('auth:sanctum')->delete('/projects/{project}', [\App\Http\Controllers\ProjectController::class, 'destroy']);

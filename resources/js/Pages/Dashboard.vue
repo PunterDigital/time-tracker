@@ -1,9 +1,3 @@
-<script setup>
-import AppLayout from '@/Layouts/AppLayout.vue';
-import Welcome from '@/Components/Welcome.vue';
-import TimeTracker from "@/Components/TimeTracker.vue";
-</script>
-
 <template>
     <AppLayout title="Dashboard">
         <template #header>
@@ -12,7 +6,7 @@ import TimeTracker from "@/Components/TimeTracker.vue";
             </h2>
         </template>
 
-        <div class="container mx-auto p-4">
+        <div class="max-w-7xl mx-auto p-4">
             <!-- Week View Section -->
             <div class="mt-6">
                 <h2 class="text-xl font-semibold mb-4">Week View</h2>
@@ -71,136 +65,138 @@ import TimeTracker from "@/Components/TimeTracker.vue";
     </AppLayout>
 </template>
 
-<script>
-import axios from 'axios';
-import { mapState, mapMutations } from 'vuex';
+<script setup>
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useStore } from 'vuex';
+import { useForm, usePage } from '@inertiajs/vue3';
+import AppLayout from "@/Layouts/AppLayout.vue";
 
-export default {
-    data() {
-        return {
-            projects: [],
-            selectedProject: '',
-            isBillable: true,
-            billingRate: 0.00,
-            currentTimeTracked: '0h 0m 0s',
-            weekDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            selectedDay: '',
-            currentDayIndex: new Date().getDay() - 1,
-            dayTotalHours: {},
-            weekView: [], // To store the week view data
-        };
-    },
-    computed: {
-        ...mapState({
-            tracking: (state) => state.tracking,
-        }),
-        currentProjectName() {
-            return this.tracking.selectedProject
-                ? `${this.tracking.selectedProject.client} - ${this.tracking.selectedProject.name}`
-                : '';
-        },
-    },
-    watch: {
-        'tracking.isTracking': {
-            handler: function (isTracking) {
-                if (isTracking) {
-                    this.startTimer();
-                } else {
-                    this.stopTimer();
-                }
-            },
-            immediate: true,
-        },
-    },
-    async created() {
-        this.$store.commit('loadTrackingFromStorage');
-        await this.fetchProjects();
-        await this.fetchWeekView();
-        this.loadDayProjects(this.currentDayIndex);
-    },
-    methods: {
-        ...mapMutations(['startTracking', 'stopTracking']),
-        onProjectChange() {
-            const project = this.projects.find(p => p.id === this.selectedProject);
-            this.billingRate = project.billing_rate;
-        },
-        formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const remainingSeconds = seconds % 60;
+const store = useStore();
+const page = usePage();
 
-            return `${hours}h ${minutes}m ${remainingSeconds}s`;
-        },
-        loadDayProjects(index) {
-            this.selectedDay = this.weekView[index];
-        },
-        async fetchWeekView() {
-            try {
-                const response = await axios.get('/api/time-entries/week-view');
-                this.weekView = response.data;
-            } catch (error) {
-                console.error('An error occurred while fetching the week view:', error);
-            }
-        },
-        startTimer() {
-            this.timer = setInterval(() => {
-                if (this.tracking.isTracking) {
-                    const startTime = new Date(this.tracking.startTime);
-                    const currentTime = new Date();
-                    const durationInSeconds = (currentTime - startTime) / 1000;
-                    const hours = Math.floor(durationInSeconds / 3600);
-                    const minutes = Math.floor((durationInSeconds % 3600) / 60);
-                    const seconds = Math.floor(durationInSeconds % 60);
-                    this.currentTimeTracked = `${hours}h ${minutes}m ${seconds}s`;
-                }
-            }, 1000);
-        },
-        stopTimer() {
-            clearInterval(this.timer);
-            this.currentTimeTracked = '0h 0m 0s';
-        },
-        async fetchProjects() {
-            try {
-                const response = await axios.get('/api/projects');
-                this.projects = response.data;
-            } catch (error) {
-                console.error('An error occurred while fetching the projects:', error);
-            }
-        },
-        startTrackingTime() {
-            const selectedProject = this.projects.find((p) => p.id === this.selectedProject);
-            this.startTracking({
-                selectedProject,
-                isBillable: this.isBillable,
-            });
-        },
-        async stopTrackingTime() {
-            if (this.tracking.isTracking) {
-                const startTime = new Date(this.tracking.startTime);
-                const endTime = new Date();
-                const durationInSeconds = Math.floor((endTime - startTime) / 1000);
+// State
+const selectedProject = ref('');
+const isBillable = ref(true);
+const billingRate = ref(0.00);
+const currentTimeTracked = ref('0h 0m 0s');
+const weekDays = ref(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+const selectedDay = ref('');
+const currentDayIndex = ref(new Date().getDay() - 1);
+const dayTotalHours = ref({});
+const weekView = computed(() => page.props.weekView.original);
+let timer = null;
 
-                const formattedStartTime = startTime.toISOString().slice(0, 19).replace('T', ' ');
-                const formattedEndTime = endTime.toISOString().slice(0, 19).replace('T', ' ');
+// Inertia form
+const form = useForm({
+    projectId: '',
+    startTime: '',
+    endTime: '',
+    isBillable: true,
+    duration: 0,
+    billingRate: 0,
+});
 
-                try {
-                    await axios.post('/api/time-entries/add', {
-                        projectId: this.tracking.selectedProject.id,
-                        startTime: formattedStartTime,
-                        endTime: formattedEndTime,
-                        isBillable: this.tracking.isBillable,
-                        duration: durationInSeconds,
-                        billingRate: this.billingRate,
-                    });
-                    this.stopTracking(); // Reset tracking state in Vuex store
-                } catch (error) {
-                    console.error('An error occurred while saving the time entry:', error);
-                }
-            }
-        },
-    },
-    beforeDestroy() {
-        this.stopTimer(); // Clear the timer when the component is destroyed
-    },
+// Computed properties
+const tracking = computed(() => store.state.tracking);
+const currentProjectName = computed(() =>
+    tracking.value.selectedProject
+        ? `${tracking.value.selectedProject.client} - ${tracking.value.selectedProject.name}`
+        : ''
+);
+
+// Access projects from Inertia shared data
+const projects = computed(() => page.props.projects);
+
+// Methods
+const onProjectChange = () => {
+    const project = projects.value.find(p => p.id === selectedProject.value);
+    billingRate.value = project.billing_rate;
 };
+
+const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+};
+
+const loadDayProjects = (index) => {
+    selectedDay.value = weekView.value[index];
+};
+
+const startTimer = () => {
+    timer = setInterval(() => {
+        if (tracking.value.isTracking) {
+            const startTime = new Date(tracking.value.startTime);
+            const currentTime = new Date();
+            const durationInSeconds = (currentTime - startTime) / 1000;
+            const hours = Math.floor(durationInSeconds / 3600);
+            const minutes = Math.floor((durationInSeconds % 3600) / 60);
+            const seconds = Math.floor(durationInSeconds % 60);
+            currentTimeTracked.value = `${hours}h ${minutes}m ${seconds}s`;
+        }
+    }, 1000);
+};
+
+const stopTimer = () => {
+    clearInterval(timer);
+    currentTimeTracked.value = '0h 0m 0s';
+};
+
+const startTrackingTime = () => {
+    const selectedProjectObj = projects.value.find((p) => p.id === selectedProject.value);
+    store.commit('startTracking', {
+        selectedProject: selectedProjectObj,
+        isBillable: isBillable.value,
+    });
+};
+
+const stopTrackingTime = () => {
+    if (tracking.value.isTracking) {
+        const startTime = new Date(tracking.value.startTime);
+        const endTime = new Date();
+        const durationInSeconds = Math.floor((endTime - startTime) / 1000);
+
+        const formattedStartTime = startTime.toISOString().slice(0, 19).replace('T', ' ');
+        const formattedEndTime = endTime.toISOString().slice(0, 19).replace('T', ' ');
+
+        form.projectId = tracking.value.selectedProject.id;
+        form.startTime = formattedStartTime;
+        form.endTime = formattedEndTime;
+        form.isBillable = tracking.value.isBillable;
+        form.duration = durationInSeconds;
+        form.billingRate = billingRate.value;
+
+        form.post(route('time-entries.store'), {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                store.commit('stopTracking'); // Reset tracking state in Vuex store
+            },
+            onError: (errors) => {
+                console.error('An error occurred while saving the time entry:', errors);
+            },
+        });
+    }
+};
+
+// Watchers
+watch(() => tracking.value.isTracking, (isTracking) => {
+    if (isTracking) {
+        startTimer();
+    } else {
+        stopTimer();
+    }
+}, { immediate: true });
+
+// Lifecycle hooks
+onMounted(() => {
+    store.commit('loadTrackingFromStorage');
+    loadDayProjects(currentDayIndex.value);
+});
+
+onBeforeUnmount(() => {
+    stopTimer(); // Clear the timer when the component is unmounted
+});
 </script>
