@@ -17,6 +17,7 @@ class TimeEntry extends Model
         'user_id',
         'billing_rate',
         'is_billable',
+        'memo'
     ];
 
     public function project()

@@ -45,6 +45,7 @@ class TimeEntryController extends Controller
                 $dayView['projects'][] = [
                     'name' => $entry->project->name,
                     'time' => $entryTime,
+                    'memo' => $entry->memo ?? '',
                 ];
             }
 
@@ -139,6 +140,7 @@ class TimeEntryController extends Controller
             'duration' => 'required|integer',
             'isBillable' => 'required|boolean',
             'billingRate' => 'required',
+            'memo' => 'nullable',
         ]);
 
         TimeEntry::create([
@@ -149,6 +151,7 @@ class TimeEntryController extends Controller
             'is_billable' => $request->isBillable,
             'user_id' => Auth::id(),
             'billing_rate' => $request->billingRate,
+            'memo' => $request->memo,
         ]);
 
         return redirect()->route('projects.index');

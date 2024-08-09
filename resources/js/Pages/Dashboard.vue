@@ -26,7 +26,7 @@
                 <h3 class="font-semibold">{{ selectedDay.name }}</h3>
                 <ul>
                     <li v-for="project in selectedDay.projects" :key="project.id">
-                        {{ project.name }}: {{ formatTime(project.time) }}
+                        {{ project.name }}: {{ formatTime(project.time) }} | {{ project.memo }}
                     </li>
                 </ul>
             </div>
@@ -37,6 +37,14 @@
                     <span class="font-semibold">Tracking project:</span> {{ currentProjectName }}<br />
                     <span class="font-semibold">Time tracked:</span> {{ currentTimeTracked }}
                 </p>
+
+                <div class="mb-2">
+                    <label for="memo" class="block text-sm font-medium leading-6 text-gray-900">Add a memo</label>
+                    <div class="mt-2">
+                        <textarea v-model="form.memo" rows="4" name="memo" id="memo" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+                    </div>
+                </div>
+
                 <button @click="stopTrackingTime" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
                     Stop Tracking
                 </button>
@@ -54,9 +62,18 @@
                     <input type="checkbox" v-model="isBillable" class="mr-2" />
                     <label>Mark as Billable</label>
                 </div>
+
+                <div class="mb-2">
+                    <label for="memo" class="block text-sm font-medium leading-6 text-gray-900">Add a memo</label>
+                    <div class="mt-2">
+                        <textarea v-model="form.memo" rows="4" name="memo" id="memo" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+                    </div>
+                </div>
+
                 <button v-if="!isTracking && !selectedProject" @click="startTrackingTime" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:cursor-not-allowed" disabled>
                     Select a project to track time on
                 </button>
+
                 <button v-else @click="startTrackingTime" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
                     Start Tracking
                 </button>
@@ -94,6 +111,7 @@ const form = useForm({
     isBillable: true,
     duration: 0,
     billingRate: 0,
+    memo: '',
 });
 
 // Computed properties
