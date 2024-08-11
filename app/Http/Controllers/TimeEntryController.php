@@ -154,7 +154,7 @@ class TimeEntryController extends Controller
             'memo' => $request->memo,
         ]);
 
-        return redirect()->route('projects.index');
+        return redirect()->route('dashboard');
     }
 
     /**

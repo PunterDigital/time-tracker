@@ -85,7 +85,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useStore } from 'vuex';
-import { useForm, usePage } from '@inertiajs/vue3';
+import {router, useForm, usePage} from '@inertiajs/vue3';
 import AppLayout from "@/Layouts/AppLayout.vue";
 
 const store = useStore();
@@ -100,7 +100,7 @@ const weekDays = ref(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 const selectedDay = ref('');
 const currentDayIndex = ref(new Date().getDay() - 1);
 const dayTotalHours = ref({});
-const weekView = computed(() => page.props.weekView.original);
+const weekView = ref(page.props.weekView.original);
 let timer = null;
 
 // Inertia form
@@ -186,11 +186,16 @@ const stopTrackingTime = () => {
         form.duration = durationInSeconds;
         form.billingRate = billingRate.value;
 
+        // todo: test if others can view time entries.
+
         form.post(route('time-entries.store'), {
             preserveState: true,
             preserveScroll: true,
-            onSuccess: () => {
+            onSuccess: (response) => {
                 store.commit('stopTracking'); // Reset tracking state in Vuex store
+
+                // Optionally, refetch the entire page data to ensure consistency
+                router.reload({ only: ['weekView'] });
             },
             onError: (errors) => {
                 console.error('An error occurred while saving the time entry:', errors);
